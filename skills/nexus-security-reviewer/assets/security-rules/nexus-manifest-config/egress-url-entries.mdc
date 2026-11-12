@@ -80,5 +80,5 @@ await fetch.request(`https://api.example.com/${staticPath(payload.resource)}`);
 
 - 对包含协议/路径的可疑 URI 条目简要指出即可，不要逐条罗列完整 URI；不要将 manifest 条目本身当作漏洞。
 - 明确说明：**后端只按域名匹配，协议/路径/端口均被忽略**。应用绝不能假设 manifest 条目会校验路径或协议。
-- 该问题本身不一定是漏洞，但它是缺失 SSRF 防护的**强力证据**。应结合 `@nexus-injection/ssrf.mdc` 等规则检查是否存在真实 SSRF。
+- 该问题本身不一定是漏洞，但它是缺失 SSRF 防护的**强力证据**。应结合 `assets/security-rules/nexus-injection/ssrf.mdc` 等规则检查是否存在真实 SSRF。
 - 若发现后端存在依赖 manifest 路径/协议校验的动态 fetch，应作为重点关注，并提供相应的数据流。

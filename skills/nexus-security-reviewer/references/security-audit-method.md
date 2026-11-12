@@ -11,21 +11,25 @@
    python3 -m scripts.summarize_manifest <project-root> --format json -o "$ARTIFACT_DIR/manifest-summary.json"
    ```
 3. 先读摘要：entrypoints、scopes、egress、remotes、exposer、events、storage、observations（线索≠已确认漏洞）。
-4. 加载 `assets/security-rules/_global-nexus.mdc`，再按信号加载分类 `_index-*.mdc`，仅在命中启发式时读子规则。
+4. 加载 `assets/security-rules/_global-nexus.mdc`，再按 `SKILL.md` 信号表打开对应 `_index-*.mdc`，仅在命中启发式时读子规则（路径一律从技能根目录写起）。
 5. 扫描产物一律写入 `ARTIFACT_DIR`，**禁止**写入被审项目源码树。
 6. 除非用户要求修复，不改应用代码。
 
-## 信号 → 规则分类
+## 信号 → 规则分类（完整相对路径）
 
-| 信号                                     | 加载                        |
-| ---------------------------------------- | --------------------------- |
-| scope / 写操作 / `as: "app"`             | `nexus-authn-authz`         |
-| webhook / exposer                        | `nexus-webhook-entrypoints` |
-| external.fetch / remotes / fetch.request | `nexus-egress-remotes`      |
-| XSS/RCE/SSRF 等 sink                     | `nexus-injection`           |
-| 全局状态 / 存储 key 作用域               | `nexus-tenant-isolation`    |
-| 凭据 / env / KVS secret                  | `nexus-secrets-storage`     |
-| 过宽 scope、CSP、通配域名                | `nexus-manifest-config`     |
+| 信号 | 索引 |
+| --- | --- |
+| scope / 写操作 / `as: "app"` | `assets/security-rules/nexus-authn-authz/_index-authn-authz.mdc` |
+| webhook / exposer | `assets/security-rules/nexus-webhook-entrypoints/_index-webhook-entrypoints.mdc` |
+| external.fetch / remotes / fetch.request | `assets/security-rules/nexus-egress-remotes/_index-egress-remotes.mdc` |
+| XSS/RCE/SSRF 等 sink | `assets/security-rules/nexus-injection/_index-injection.mdc` |
+| 全局状态 / 存储 key 作用域 | `assets/security-rules/nexus-tenant-isolation/_index-tenant-isolation.mdc` |
+| 凭据 / env / KVS secret | `assets/security-rules/nexus-secrets-storage/_index-secrets-storage.mdc` |
+| 过宽 scope、CSP、通配域名 | `assets/security-rules/nexus-manifest-config/_index-manifest-config.mdc` |
+| 完整静态扫描 | `assets/security-rules/nexus-auditing/_index-auditing.mdc` |
+| SCA / 依赖 | `assets/security-rules/nexus-misc/_index-misc.mdc` |
+
+子规则路径形如 `assets/security-rules/<category>/<rule>.mdc`。索引与规则正文中的互引也必须使用该形式，**不要**使用 `@category/rule.mdc` 别名。
 
 ## 必须覆盖
 

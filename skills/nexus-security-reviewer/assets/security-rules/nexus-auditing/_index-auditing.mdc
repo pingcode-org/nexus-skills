@@ -16,9 +16,7 @@ Nexus 审计关键关注点
 
 子规则
 
-- Nexus 静态分析 → `@nexus-auditing/static-analysis-nexus.mdc`
-<!-- - 日志安全 → `@nexus-auditing/logging-security.mdc`
-- 错误处理 → `@nexus-auditing/error-handling.mdc` -->
+- Nexus 静态分析 → `assets/security-rules/nexus-auditing/static-analysis-nexus.mdc`
 
 检测启发式
 

@@ -19,10 +19,7 @@ Nexus 租户隔离关键风险
 
 子规则
 
-- 全局状态与 Warm Start → `@nexus-tenant-isolation/global-state-warmstart.mdc`
-<!-- - 缓存隔离 → `@nexus-tenant-isolation/cache-isolation.mdc`
-- 存储键作用域 → `@nexus-tenant-isolation/storage-key-scoping.mdc`
-- 跨租户 API 风险 → `@nexus-tenant-isolation/cross-tenant-api.mdc` -->
+- 全局状态与 Warm Start → `assets/security-rules/nexus-tenant-isolation/global-state-warmstart.mdc`
 
 检测启发式
 
