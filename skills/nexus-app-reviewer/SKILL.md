@@ -21,10 +21,10 @@ metadata:
 ## MUST
 
 1. 先审计，默认**不改代码**；按 `references/review-checklist.md` 产出通过 / 阻塞 / 建议。
-2. 遵守 `references/boundaries.md`、`references/platform-invariants.md`。
+2. **开始前打开并读完** [references/boundaries.md](references/boundaries.md) 与 [references/platform-invariants.md](references/platform-invariants.md)。
 3. 读 `manifest.yaml`（优先于 `.yml`）与相关源码；运行 `nexus lint` 作证据。
 4. 明显安全信号可记录并建议转 `nexus-security-reviewer`，**不默认**完整 SAST/`npm audit`。
-5. **知识原则**：审查流程与清单用内置 `review-checklist`；字段/SDK/扩展点准确规范按需官方在线查证（`docs-online.md`），不猜测。
+5. **知识原则**：打开 [references/review-checklist.md](references/review-checklist.md)；字段/SDK/扩展点按条件查证（[references/docs-online.md](references/docs-online.md)），勿整目录预读、不猜测。
 6. 不索要 token；不执行 deploy/distribute，除非用户明确要求。
 
 ## NEVER

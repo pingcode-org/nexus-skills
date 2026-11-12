@@ -2,10 +2,11 @@
 """
 Search Nexus developer documentation at https://developer.pingcode.com.
 
-The script fetches sitemap.xml, scores each URL by keyword matches against
-the URL, title and description, then downloads the most promising pages and
-extracts readable text from <main> until it has gathered enough relevant
-content.
+Preferred index (when published by the docs host):
+  - /llms.txt           platform / Nexus docs
+  - /restapi/llms.txt   RestAPI docs
+
+If those indexes are unavailable, fall back to sitemap.xml + HTML extraction.
 
 Default docs site is https://developer.pingcode.com. Override with --base-url
 or NEXUS_DOCS_BASE_URL when pointing at another docs host.
@@ -13,8 +14,8 @@ or NEXUS_DOCS_BASE_URL when pointing at another docs host.
 Examples:
     python3 -m scripts.search_nexus_docs "custom ui react"
     python3 -m scripts.search_nexus_docs manifest permissions --max-pages 3
+    python3 -m scripts.search_nexus_docs "work items" --source restapi
     python3 -m scripts.search_nexus_docs "resolver" --json
-    python3 -m scripts.search_nexus_docs "scopes" --base-url https://developer.pingcode.com
 """
 
 import argparse
@@ -23,14 +24,16 @@ import json
 import os
 import re
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from html.parser import HTMLParser
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 
 DEFAULT_BASE_URL = "https://developer.pingcode.com"
 DEFAULT_TIMEOUT = 20
+LLMS_PLATFORM_PATH = "/llms.txt"
+LLMS_RESTAPI_PATH = "/restapi/llms.txt"
 
 # Mutable module state set by configure_base_url() / main().
 BASE_URL = DEFAULT_BASE_URL
@@ -39,7 +42,7 @@ USER_AGENT = f"nexus-docs-search/1.0 (+{DEFAULT_BASE_URL})"
 
 
 def configure_base_url(base_url):
-    """Set docs site base URL used for sitemap fetch and URL scoring."""
+    """Set docs site base URL used for index fetch and URL scoring."""
     global BASE_URL, SITEMAP_URL, USER_AGENT
     base = (base_url or DEFAULT_BASE_URL).rstrip("/")
     BASE_URL = base
@@ -48,19 +51,21 @@ def configure_base_url(base_url):
 
 
 def normalize_docs_url(url):
-    """Rewrite sitemap <loc> host to the configured BASE_URL host.
+    """Rewrite absolute URLs onto the configured BASE_URL host.
 
-    Production sitemap.xml may still list alternate docs hosts while
-    --base-url / NEXUS_DOCS_BASE_URL points at developer.pingcode.com. Keep path
-    / query / fragment; only align scheme + netloc with BASE_URL.
+    Keep path / query / fragment; only align scheme + netloc with BASE_URL.
+    Relative paths are resolved against BASE_URL.
     """
     try:
+        if not url:
+            return url
+        absolute = urljoin(BASE_URL + "/", url)
         target = urlparse(BASE_URL)
-        src = urlparse(url)
+        src = urlparse(absolute)
         if not src.scheme or not src.netloc or not target.netloc:
-            return url
+            return absolute
         if src.netloc == target.netloc and src.scheme == (target.scheme or src.scheme):
-            return url
+            return absolute
         return urlunparse(
             (
                 target.scheme or src.scheme,
@@ -82,7 +87,6 @@ class TextExtractor(HTMLParser):
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.in_title = 0
         self.title_depth = 0
         self.main_depth = 0
         self.in_skip = 0
@@ -150,21 +154,12 @@ def http_get(url, timeout=DEFAULT_TIMEOUT):
         return resp.read().decode(charset, errors="replace")
 
 
-def fetch_sitemap():
-    """Return list of (url, lastmod) tuples from the sitemap."""
-    raw = http_get(SITEMAP_URL)
-    entries = []
-    for block in re.findall(r"<url>(.*?)</url>", raw, re.S):
-        loc = re.search(r"<loc>(.*?)</loc>", block, re.S)
-        if not loc:
-            continue
-        url = normalize_docs_url(html.unescape(loc.group(1).strip()))
-        lastmod = ""
-        m = re.search(r"<lastmod>(.*?)</lastmod>", block, re.S)
-        if m:
-            lastmod = m.group(1).strip()
-        entries.append((url, lastmod))
-    return entries
+def http_get_optional(url, timeout=DEFAULT_TIMEOUT):
+    """Return body text, or None on HTTP/network errors (including 404)."""
+    try:
+        return http_get(url, timeout=timeout)
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError):
+        return None
 
 
 def tokenize(query):
@@ -186,6 +181,98 @@ def score_url(url, terms):
             elif term in seg:
                 score += 3
     return score
+
+
+def score_text_fields(text, terms, hit_weight=8):
+    score = 0
+    haystack = (text or "").lower()
+    for term in terms:
+        if term in haystack:
+            score += hit_weight
+    return score
+
+
+def parse_llms_index(raw, source_name):
+    """Parse an llms.txt markdown index into catalog entries.
+
+    Supports common list forms:
+      - [Title](/path.md): optional description
+      - [Title](https://host/path.md)
+    """
+    entries = []
+    for line in (raw or "").splitlines():
+        m = re.search(r"\[([^\]]+)\]\(([^)]+)\)", line)
+        if not m:
+            continue
+        title = m.group(1).strip()
+        href = m.group(2).strip()
+        if not href:
+            continue
+        desc = ""
+        after = line[m.end():].strip()
+        if after.startswith(":"):
+            desc = after[1:].strip()
+        url = normalize_docs_url(href)
+        entries.append(
+            {
+                "url": url,
+                "title": title,
+                "description": desc,
+                "source": source_name,
+                "lastmod": "",
+            }
+        )
+    return entries
+
+
+def fetch_llms_catalog(kinds):
+    """Fetch and merge llms.txt catalogs for the requested kinds.
+
+    kinds: iterable of 'platform' and/or 'restapi'
+    Returns (entries, used_sources). used_sources empty means unavailable.
+    """
+    path_by_kind = {
+        "platform": LLMS_PLATFORM_PATH,
+        "restapi": LLMS_RESTAPI_PATH,
+    }
+    entries = []
+    used = []
+    for kind in kinds:
+        path = path_by_kind[kind]
+        raw = http_get_optional(BASE_URL + path)
+        if raw is None:
+            continue
+        parsed = parse_llms_index(raw, kind)
+        if not parsed:
+            continue
+        entries.extend(parsed)
+        used.append(kind)
+    return entries, used
+
+
+def fetch_sitemap():
+    """Return list of catalog dicts from the sitemap fallback."""
+    raw = http_get(SITEMAP_URL)
+    entries = []
+    for block in re.findall(r"<url>(.*?)</url>", raw, re.S):
+        loc = re.search(r"<loc>(.*?)</loc>", block, re.S)
+        if not loc:
+            continue
+        url = normalize_docs_url(html.unescape(loc.group(1).strip()))
+        lastmod = ""
+        m = re.search(r"<lastmod>(.*?)</lastmod>", block, re.S)
+        if m:
+            lastmod = m.group(1).strip()
+        entries.append(
+            {
+                "url": url,
+                "title": "",
+                "description": "",
+                "source": "sitemap",
+                "lastmod": lastmod,
+            }
+        )
+    return entries
 
 
 def fetch_page_meta(url):
@@ -216,17 +303,7 @@ def fetch_page_meta(url):
     return title, desc, len(raw)
 
 
-def score_page(url, title, description, terms):
-    """Score a page using URL, title and description."""
-    score = score_url(url, terms)
-    haystack = (title + " " + description).lower()
-    for term in terms:
-        if term in haystack:
-            score += 8
-    return score
-
-
-def extract_text(raw_html):
+def extract_text_from_html(raw_html):
     parser = TextExtractor()
     try:
         parser.feed(raw_html)
@@ -234,6 +311,19 @@ def extract_text(raw_html):
     except Exception:
         pass
     return parser.get_title(), parser.get_text()
+
+
+def extract_page_content(url, raw):
+    """Return (title, text) for markdown or HTML bodies."""
+    path = (urlparse(url).path or "").lower()
+    if path.endswith(".md") or path.endswith(".markdown") or path.endswith(".txt"):
+        title = ""
+        for line in raw.splitlines():
+            if line.startswith("#"):
+                title = line.lstrip("#").strip()
+                break
+        return title, _normalize_whitespace(raw)
+    return extract_text_from_html(raw)
 
 
 def snippet_for(text, terms, max_len=500):
@@ -256,81 +346,165 @@ def snippet_for(text, terms, max_len=500):
     return text[:max_len].strip()
 
 
-def search(query, max_pages=3, max_snippet=600, min_score=1):
+def infer_source_kinds(query, source):
+    """Map --source to llms index kinds. 'sitemap' bypasses llms."""
+    if source == "sitemap":
+        return []
+    if source == "platform":
+        return ["platform"]
+    if source == "restapi":
+        return ["restapi"]
+    # auto
+    q = (query or "").lower()
+    rest_hints = (
+        "restapi", "rest api", "/v1/", "/v2/", "openapi", "access_token",
+        "work_item", "workitem", "scope", "oauth", "grant_type",
+    )
+    platform_hints = (
+        "manifest", "resolver", "bridge", "nexus", "extension", "custom ui",
+        "native ui", "deploy", "distribute", "webhook", "exposer",
+    )
+    wants_rest = any(h in q for h in rest_hints)
+    wants_platform = any(h in q for h in platform_hints)
+    if wants_rest and not wants_platform:
+        return ["restapi", "platform"]
+    if wants_platform and not wants_rest:
+        return ["platform", "restapi"]
+    return ["platform", "restapi"]
+
+
+def score_catalog_entry(entry, terms):
+    score = score_url(entry["url"], terms)
+    score += score_text_fields(
+        f"{entry.get('title', '')} {entry.get('description', '')}",
+        terms,
+        hit_weight=10,
+    )
+    # Prefer markdown resource pages from llms indexes when tied.
+    if entry.get("source") in ("platform", "restapi"):
+        score += 1
+    return score
+
+
+def search(query, max_pages=3, max_snippet=600, min_score=1, source="auto"):
     terms = tokenize(query)
     if not terms:
         return {"query": query, "results": [], "error": "empty query"}
 
-    entries = fetch_sitemap()
+    index_mode = "sitemap"
+    catalog = []
+    used_llms = []
 
-    # First pass: rank by URL only (no network per page beyond sitemap).
-    url_scored = [
-        (score_url(url, terms), url, lastmod)
-        for url, lastmod in entries
-    ]
-    url_scored = [(s, u, l) for s, u, l in url_scored if s > 0]
-    url_scored.sort(key=lambda x: (-x[0], x[1]))
+    if source != "sitemap":
+        kinds = infer_source_kinds(query, source)
+        catalog, used_llms = fetch_llms_catalog(kinds)
+        if catalog:
+            index_mode = "llms:" + "+".join(used_llms)
 
-    # Fetch top candidates to refine by title/description.
-    candidates = url_scored[: max(max_pages * 4, 10)]
-    refined = []
-    for score, url, lastmod in candidates:
-        title, desc, _ = fetch_page_meta(url)
-        final_score = score_page(url, title, desc, terms)
-        refined.append((final_score, url, title, desc, lastmod))
-    refined.sort(key=lambda x: (-x[0], x[1]))
+    if not catalog:
+        catalog = fetch_sitemap()
+        index_mode = "sitemap"
 
-    # Second pass: fetch content of the best pages until we have enough.
+    scored = []
+    for entry in catalog:
+        score = score_catalog_entry(entry, terms)
+        if score > 0:
+            scored.append((score, entry))
+    scored.sort(key=lambda x: (-x[0], x[1]["url"]))
+
+    # For sitemap fallback, refine top URL hits with HTML title/description.
+    candidates = scored[: max(max_pages * 4, 10)]
+    if index_mode == "sitemap":
+        refined = []
+        for score, entry in candidates:
+            title, desc, _ = fetch_page_meta(entry["url"])
+            merged_title = title or entry.get("title", "")
+            merged_desc = desc or entry.get("description", "")
+            final_score = score_url(entry["url"], terms) + score_text_fields(
+                f"{merged_title} {merged_desc}", terms, hit_weight=8
+            )
+            refined.append(
+                (
+                    final_score,
+                    {
+                        **entry,
+                        "title": merged_title,
+                        "description": merged_desc,
+                    },
+                )
+            )
+        refined.sort(key=lambda x: (-x[0], x[1]["url"]))
+        candidates = refined
+
     results = []
     seen = set()
-    for score, url, title, desc, lastmod in refined:
+    for score, entry in candidates:
         if len(results) >= max_pages:
             break
-        if score < min_score or url in seen:
+        if score < min_score:
+            continue
+        url = entry["url"]
+        if url in seen:
             continue
         seen.add(url)
 
         try:
             raw = http_get(url)
         except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
-            results.append({
-                "url": url,
-                "title": title,
-                "score": score,
-                "error": str(exc),
-            })
+            results.append(
+                {
+                    "url": url,
+                    "title": entry.get("title") or "",
+                    "score": score,
+                    "source": entry.get("source"),
+                    "error": str(exc),
+                }
+            )
             continue
 
-        page_title, text = extract_text(raw)
-        final_title = page_title or title
+        page_title, text = extract_page_content(url, raw)
+        final_title = page_title or entry.get("title") or ""
         body_score = 0
         lowered_text = text.lower()
         for term in terms:
             body_score += lowered_text.count(term)
         total_score = score + min(body_score, 50)
 
-        results.append({
-            "url": url,
-            "title": final_title,
-            "description": desc,
-            "score": total_score,
-            "lastmod": lastmod,
-            "snippet": snippet_for(text, terms, max_snippet),
-            "content_length": len(text),
-        })
+        results.append(
+            {
+                "url": url,
+                "title": final_title,
+                "description": entry.get("description") or "",
+                "score": total_score,
+                "source": entry.get("source"),
+                "lastmod": entry.get("lastmod") or "",
+                "snippet": snippet_for(text, terms, max_snippet),
+                "content_length": len(text),
+            }
+        )
 
-    return {"query": query, "terms": terms, "results": results}
+    return {
+        "query": query,
+        "terms": terms,
+        "index": index_mode,
+        "base_url": BASE_URL,
+        "results": results,
+    }
 
 
 def format_text(result):
     lines = []
     lines.append(f"# Search: {result['query']}")
     lines.append(f"Terms: {', '.join(result['terms'])}")
+    lines.append(f"Index: {result.get('index', 'unknown')}")
+    lines.append(f"Base: {result.get('base_url', BASE_URL)}")
     lines.append(f"Results: {len(result['results'])}\n")
     for i, r in enumerate(result["results"], 1):
         lines.append(f"## {i}. {r.get('title') or '(no title)'}")
         lines.append(f"URL: {r['url']}")
         lines.append(f"Score: {r['score']}")
+        if r.get("source"):
+            lines.append(f"Source: {r['source']}")
         if r.get("lastmod"):
             lines.append(f"Last modified: {r['lastmod']}")
         if r.get("description"):
@@ -345,7 +519,10 @@ def format_text(result):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Search Nexus developer documentation online (default: developer.pingcode.com).",
+        description=(
+            "Search Nexus developer documentation online "
+            "(llms.txt when available, otherwise sitemap)."
+        ),
     )
     parser.add_argument("query", help="Search keywords (e.g. 'custom ui react')")
     parser.add_argument(
@@ -355,6 +532,15 @@ def main():
     parser.add_argument(
         "--max-snippet", type=int, default=600,
         help="Maximum snippet length per page (default: 600)",
+    )
+    parser.add_argument(
+        "--source",
+        choices=("auto", "platform", "restapi", "sitemap"),
+        default="auto",
+        help=(
+            "Index selection: auto (prefer llms.txt), platform (/llms.txt), "
+            "restapi (/restapi/llms.txt), or sitemap (force sitemap fallback)"
+        ),
     )
     parser.add_argument(
         "--base-url",
@@ -371,7 +557,12 @@ def main():
     configure_base_url(args.base_url)
 
     try:
-        result = search(args.query, args.max_pages, args.max_snippet)
+        result = search(
+            args.query,
+            args.max_pages,
+            args.max_snippet,
+            source=args.source,
+        )
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

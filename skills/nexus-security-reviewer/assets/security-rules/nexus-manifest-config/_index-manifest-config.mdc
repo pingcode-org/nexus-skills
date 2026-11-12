@@ -21,9 +21,9 @@ Nexus Manifest/配置关键风险
 
 子规则
 
-- 权限 Scopes 审查 → `@nexus-manifest-config/permission-scopes.mdc`
-- 出站 URL 条目反模式 → `@nexus-manifest-config/egress-url-entries.mdc`
-- 内容安全策略（CSP）→ `@nexus-manifest-config/content-security-policy.mdc`
+- 权限 Scopes 审查 → `assets/security-rules/nexus-manifest-config/permission-scopes.mdc`
+- 出站 URL 条目反模式 → `assets/security-rules/nexus-manifest-config/egress-url-entries.mdc`
+- 内容安全策略（CSP）→ `assets/security-rules/nexus-manifest-config/content-security-policy.mdc`
 
 检测启发式
 

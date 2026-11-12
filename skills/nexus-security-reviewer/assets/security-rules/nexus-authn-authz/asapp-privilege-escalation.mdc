@@ -142,7 +142,7 @@ resolver.define<{ pageId: string; content: unknown }, void>(
 - 在入口处使用 schema 校验（zod、joi 等）并启用 strict/拒绝未知键。
 - 避免不安全的递归合并；对 `__proto__`、`constructor`、`prototype` 键进行拒绝。
 
-参见 `@nexus-injection/prototype-pollution.mdc`。
+参见 `assets/security-rules/nexus-injection/prototype-pollution.mdc`。
 
 PoC / 测试线索
 

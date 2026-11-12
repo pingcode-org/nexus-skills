@@ -5,9 +5,11 @@ description: "面向 AI 的 PingCode Nexus 应用 manifest.yaml 结构、字段�
 
 # Nexus 应用 manifest 开发者指南
 
-## 相关指南
+## 相关指南（按需，勿因本文件再整本预读）
 
-- nexus-development-guide
+- 创建 / 部署总览：`nexus-development-guide.md`（仅当前任务相关章节）
+
+加载规则：**按章节跳读**本指南；**不要**为打开本指南而先通读其它长指南。
 
 `manifest.yaml` 文件是每个 Nexus 应用的配置核心。它定义应用的唯一标识、扩展点、后端函数、静态资源以及权限范围。结构正确是应用能够成功构建、部署、分发并在企业中安装的前提。
 

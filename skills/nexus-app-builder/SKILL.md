@@ -1,9 +1,10 @@
 ---
 name: nexus-app-builder
 description: >-
-  引导构建、部署、分发 PingCode Nexus 应用——使用 Nexus CLI（nexus create / deploy / distribute）
-  以及 Custom UI、Native UI 或事件/Webhook 模板。适用于新建或修改扩展、开发咨询、构建验证，以及用户明确要求的部署分发。
-  不要用于通用 PingCode 配置或脱离 Nexus 应用上下文的 REST 调用；已有故障排查优先 nexus-app-debugger，
+  引导新建或修改 PingCode 扩展应用：工作项面板、项目页、仪表盘部件、Wiki 内容块、事件处理、Webhook，
+  以及 Custom UI / Native UI、Resolver、manifest、scope。适用于「加一块面板」「做个仪表盘部件」
+  「Wiki 里嵌图表」等即使用户未说 Nexus；构建验证；仅当用户明确要求时再部署/分发（nexus create / deploy / distribute）。
+  不要用于通用 PingCode 配置或脱离扩展应用上下文的 REST 调用；已有故障排查优先 nexus-app-debugger，
   发布就绪检查用 nexus-app-reviewer，深度安全审计用 nexus-security-reviewer。
 license: MIT
 metadata:
@@ -23,11 +24,11 @@ metadata:
 ## 硬约束
 
 1. 先判断意图：**咨询 / 新建 / 改已有 / 部署分发**——按需分支，**不强制**跑完创建→分发全链路。
-2. 遵守 `references/boundaries.md`、`references/platform-invariants.md`。
+2. **开始前打开并读完** [references/boundaries.md](references/boundaries.md) 与 [references/platform-invariants.md](references/platform-invariants.md)。
 3. **新建**应用时始终用 `nexus create`（或本包 `scripts.create_nexus_app`）脚手架——禁止手搓无 `app.id` 的工程；纯咨询与改已有应用不要跑 create。
 4. 绝不在对话中索要/接收 API 令牌；引导用户本机 `nexus login`。
 5. 前端构建口径：裸 `nexus deploy` **不会**自动 `build-web`；本包 `deploy_nexus_app` 会尝试构建（无前端脚本则跳过）。裸 CLI 部署前有前端时 **ALWAYS** 先 `npm run build-web`。无 `nexus install`（分发后管理员安装）。
-6. **知识原则**：核心靠随包内置的 `references/`；完整平台参考（target/scope/API 明细）按需上官方在线文档 / `search_nexus_docs`，**不编造**。遵守 `references/docs-online.md`。
+6. **知识原则**：按条件打开单个参考文件（见 [references/docs-online.md](references/docs-online.md)）；完整平台参考按需 `search_nexus_docs`，**不编造**、勿整目录预读。
 7. 包前缀 `@pc-nexus/*`，CLI 为 `nexus`；文件名 `manifest.yaml`。
 8. UI Invoke ~5s；长任务用异步队列。`display` 不是鉴权。
 
@@ -77,25 +78,24 @@ python3 -m scripts.create_nexus_app \
 
 选 `target`：`references/list-nexus-extensions.md` + 官方扩展点文档；**逐字复制**。
 
-### 定制
+### 定制（只打开当前任务需要的一份）
 
-- Custom UI 最小路径：`references/ui-resolver-min-path.md`
-- Native UI 最小路径：`references/native-ui-min-path.md`
-- 事件 / Webhook 最小路径：`references/event-webhook-min-path.md`
-- 深读：`nexus-custom-ui-developer-guide.md`（含 Native 对照）、`nexus-backend-developer-guide.md`、`nexus-app-manifest-guide.md`——**按章节跳读**，服从上方意图分支，勿被指南里的创建/部署示例带去全链路
-- `nexus-development-guide.md`：**仅路径 A 或按章节跳读**；服从上方意图分支，勿默认全链路
+- Custom UI 最小路径：[references/ui-resolver-min-path.md](references/ui-resolver-min-path.md)
+- Native UI 最小路径：[references/native-ui-min-path.md](references/native-ui-min-path.md)（manifest 连线见 [references/manifest-basics.md](references/manifest-basics.md)）
+- 事件 / Webhook 最小路径：[references/event-webhook-min-path.md](references/event-webhook-min-path.md)
+- 深读（**按章节跳读，一次只开一份**；勿因指南互链再通读其它长文）：
+  - [references/nexus-custom-ui-developer-guide.md](references/nexus-custom-ui-developer-guide.md)
+  - [references/nexus-backend-developer-guide.md](references/nexus-backend-developer-guide.md)
+  - [references/nexus-app-manifest-guide.md](references/nexus-app-manifest-guide.md)
+  - [references/nexus-development-guide.md](references/nexus-development-guide.md)（仅路径 A 或相关章节）
 
 ### 部署 / 分发（仅用户要求或任务明确需要）
 
-见 [references/deploy-only.md](references/deploy-only.md)。优先本包脚本（agent 亲自跑，勿只甩命令）。
+见 [references/deploy-only.md](references/deploy-only.md)。优先本包脚本（agent 亲自跑，勿只甩命令）。`--distribute` 时必须传 `--site <域名>`。
 
 ### 在线检索
 
-```bash
-python3 -m scripts.search_nexus_docs "resolver permissions" --max-pages 3
-```
-
-默认生产站；见 `references/docs-online.md`。
+见 [references/docs-online.md](references/docs-online.md)。
 
 ## NEVER
 

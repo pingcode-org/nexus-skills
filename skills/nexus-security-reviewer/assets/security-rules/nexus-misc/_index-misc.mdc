@@ -9,7 +9,7 @@ alwaysApply: false
 
 子规则
 
-- 软件成分分析 → `@nexus-misc/software-composition.mdc`
+- 软件成分分析 → `assets/security-rules/nexus-misc/software-composition.mdc`
 
 杂项关键关注点
 
