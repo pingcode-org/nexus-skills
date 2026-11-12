@@ -24,7 +24,7 @@ SDK、REST API、manifest 是四个技能共享的知识模块，按任务目的
 
 **核心知识随包内置；完整平台参考通过官方在线文档按需获取**（见 `docs-online.md`）。
 
-- 常见任务：先用本包 `references/` / `assets/`（L0/L1）。
+- 常见任务：按条件打开**单个** `references/` / `assets/` 文件（L0/L1）；勿整目录预读。
 - 准确 target、scope、API 字段：再上 `https://developer.pingcode.com` / `search_nexus_docs`（L2）。
 - 命令与签名：本机 `--help` / 已装 SDK 类型（L3）。
 - 运行时只依赖**本包 + 官方在线文档**。

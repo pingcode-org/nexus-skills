@@ -8,11 +8,27 @@
 
 |            | 内置（随包）                                              | 在线（按需）                                                           |
 | ---------- | --------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 是什么     | 本包内的 `SKILL.md`、`references/`、`assets/`             | `https://developer.pingcode.com` 正文（可用 `search_nexus_docs` 发现） |
+| 是什么     | 本仓库随包提供的 `SKILL.md`、`references/`、`assets/`     | `https://developer.pingcode.com` 正文（可用 `search_nexus_docs` 发现） |
 | 用来做什么 | 常见任务：流程、硬约束、连线、最小示例、高频排障/审查方法 | 完整字段表、扩展点属性、API/scope 明细、配额与版本说明                 |
-| Agent 行为 | 优先读完再动手                                            | 配置准确 target/scope/API 参数前再打开；勿整站预读                     |
+| Agent 行为 | **按条件打开单个文件**；勿整目录预读                      | 配置准确 target/scope/API 参数前再打开；勿整站预读                     |
 
 官方文档站默认：`https://developer.pingcode.com`（可用 `NEXUS_DOCS_BASE_URL` / `--base-url` 覆盖）。
+
+## 在线索引（L2）
+
+需要准确的 target / scope / API / 字段时再检索：
+
+```bash
+python3 -m scripts.search_nexus_docs "<keywords>" --max-pages 3
+```
+
+| 场景 | `--source` | 索引 |
+| --- | --- | --- |
+| manifest、Bridge、Resolver、扩展点、开发指南 | `platform`（或 `auto`） | `/llms.txt` |
+| 业务接口、鉴权、OpenAPI | `restapi` | `/restapi/llms.txt` |
+| 强制 sitemap | `sitemap` | `sitemap.xml` |
+
+`auto` 优先上述索引；不可用则回退 sitemap。只读返回的 Top 页，勿整站预读。
 
 ## 知识来源（强制）
 
@@ -29,17 +45,14 @@
 | 层  | 内容                                       | 何时用                               |
 | --- | ------------------------------------------ | ------------------------------------ |
 | L0  | `SKILL.md` 硬约束与短工作流                | 始终                                 |
-| L1  | 内置 `references/`（核心知识）             | 常见实现 / 排障 / 审查               |
+| L1  | 内置 `references/`（核心知识）             | **按任务打开单个文件**；常见实现 / 排障 / 审查 |
 | L2  | 在线文档 / `search_nexus_docs`（完整参考） | L1 不够、要准确字段/target/scope/API |
 | L3  | CLI `--help`、已装 SDK 类型                | 命令参数与签名最终核对               |
 
 ## 何时上在线（L2）
 
 1. 已知主题 → 直接打开对应在线页面。
-2. 不知位置 →
-   ```bash
-   python3 -m scripts.search_nexus_docs "<english keywords>" [--max-pages 3] [--json]
-   ```
+2. 不知位置 → 用上方检索命令。
 3. 配置准确的 `target`、scope、API 参数前 → **必须** L2（或 L1 已含且仍适用）。
 4. **网络失败**：用内置（L0/L1）继续能做的部分；缺可靠资料则明确报告，**不猜测**。
 

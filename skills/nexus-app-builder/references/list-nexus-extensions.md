@@ -5,14 +5,13 @@ description: "按产品列出可用的 Nexus 扩展点 target，脚手架时对�
 
 # Nexus extensions by product
 
-## Related tools
+## Loading rules
 
-- nexus-development-guide
-- nexus-app-manifest-guide
+本文件只用于选 `target`。**不要**因打开本文件再通读其它长指南。
 
 Once you find the extension you want, look up its `target` and properties in the corresponding extension reference at https://developer.pingcode.com/reference/resource/extensions/ (or run `python3 -m scripts.search_nexus_docs` with English keywords). ALWAYS copy the `target` string verbatim from that reference; NEVER invent a target.
 
-Each extension is declared under the top-level `extensions` array of `manifest.yaml`. Every extension requires at minimum `key` and `target`. UI extensions additionally reference a Custom UI bundle via `resource` (matching a `resources[].key`) and a backend handler via `resolver.function` (matching a `functions[].key`) or `resolver.endpoint` (matching an `endpoints[].key`). See `nexus-app-manifest-guide` for the full manifest schema, including `display` conditions, permissions, and the distinction between `function` and `endpoint` resolvers.
+Each extension is declared under the top-level `extensions` array of `manifest.yaml`. Every extension requires at minimum `key` and `target`. UI extensions additionally reference a Custom UI bundle via `resource` (matching a `resources[].key`) and a backend handler via `resolver.function` (matching a `functions[].key`) or `resolver.endpoint` (matching an `endpoints[].key`). 仅当缺某个 manifest 字段写法时，再按章节打开 `nexus-app-manifest-guide.md`；勿整本预读。
 
 ## Global extensions (Platform)
 

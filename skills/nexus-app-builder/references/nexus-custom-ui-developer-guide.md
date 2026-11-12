@@ -5,25 +5,27 @@ description: "面向 AI 的 PingCode Nexus Custom UI 前端开发指南：iframe
 
 # Nexus Custom UI 开发者指南
 
-## 相关工具（本包已有）
+## 相关指南（按需，勿因本文件再整本预读）
 
-- `nexus-development-guide.md` — 创建、部署、分发、调试总览
-- `nexus-app-manifest-guide.md` — manifest 字段
-- `nexus-backend-developer-guide.md` — Resolver、网络、存储、事件、i18n 等后端能力
+- 创建 / 部署总览：`nexus-development-guide.md`（仅当前任务相关章节）
+- manifest 字段：`nexus-app-manifest-guide.md`（仅当前字段相关章节）
+- Resolver / 网络 / 存储：`nexus-backend-developer-guide.md`（仅当前后端主题章节）
 
-## 1. 指南范围与必读章节
+## 1. 指南范围与加载规则
 
 本指南聚焦 Nexus Custom UI 前端特定的内容：iframe 运行模型、前端框架工程结构、`@pc-nexus/bridge` 与 `@pc-nexus/capabilities`、与 Resolver 的通信契约、多语言、文件存储、HMR 调试与常见错误。
 
-**服从 builder 意图分支**（见 `SKILL.md`）：纯咨询只读概念章节，不强制 create/deploy；改已有应用跳过 §3.1 脚手架；仅用户要求或需要本地联调时再 deploy/distribute。完整创建→分发流程见 `nexus-development-guide`，按需跳读，勿默认跑完全链路。
+**服从 builder 意图分支**（见 `SKILL.md`）：纯咨询只读概念章节，不强制 create/deploy；改已有应用跳过脚手架；仅用户要求或需要本地联调时再 deploy/distribute。
 
-阅读本指南前端章节前，视意图具备：
+加载规则：
 
-1. 需要跑 CLI / 工程时：Node.js 24+ 与 `@pc-nexus/cli`。
-2. **新建**时：用 `nexus create` 选 Custom UI 模板之一：`react-custom-ui`（推荐）、`angular-custom-ui`、`vue-custom-ui`、`javascript-custom-ui`（`--template` 须用这些 slug，不是展示名）。**已有工程跳过本步。**
-3. 工程依赖：`@pc-nexus/core`、`@pc-nexus/network`（服务端）和 `@pc-nexus/bridge`（前端）。
+- **按章节跳读**本指南；不必整本顺序通读。
+- **不要**为打开本指南而先通读其它长指南；其它指南仅在当前任务明确需要时再按章节打开。
+- 需要跑 CLI / 工程时：Node.js 24+ 与 `@pc-nexus/cli`。
+- **新建**时：用 `nexus create` 选 Custom UI 模板之一：`react-custom-ui`（推荐）、`angular-custom-ui`、`vue-custom-ui`、`javascript-custom-ui`。**已有工程跳过本步。**
+- 工程依赖：`@pc-nexus/core`、`@pc-nexus/network`（服务端）和 `@pc-nexus/bridge`（前端）。
 
-按与当前任务相关的章节阅读即可，不必整本顺序通读。Nexus Custom UI 运行在标准浏览器 iframe 中，使用普通的 React / Angular / Vue / 原生 JavaScript；不要与 Native UI（`Nx*` / `NexusReconciler`）混用渲染路径。
+Nexus Custom UI 运行在标准浏览器 iframe 中，使用普通的 React / Angular / Vue / 原生 JavaScript；不要与 Native UI（`Nx*` / `NexusReconciler`）混用渲染路径。
 
 ## 2. Custom UI 核心概念
 

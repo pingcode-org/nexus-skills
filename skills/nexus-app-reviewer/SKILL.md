@@ -3,7 +3,8 @@ name: nexus-app-reviewer
 description: >-
   对 PingCode Nexus 应用执行轻量级发布前就绪审查，覆盖 manifest/模块连线、架构、运行时兼容、
   依赖姿态、验证与部署就绪，以及明显的安全或可靠性信号。适用于「审查我的应用」「能不能发布」
-  「部署前检查」。不要用于深度安全审计（nexus-security-reviewer）或诊断已知故障（nexus-app-debugger）。
+  「部署前检查」。不要用于新建/改功能或讲解执行怎么部署/分发（nexus-app-builder）、
+  安全审计/漏洞评估/AuthZ 深挖（nexus-security-reviewer）或诊断已知故障（nexus-app-debugger）。
 license: MIT
 metadata:
   maintainer: pingcode
@@ -15,16 +16,16 @@ metadata:
 
 ## 何时使用
 
-应用**已有实现**，用户要做发布前 / 提交前就绪检查。  
-新建与功能实现 → `nexus-app-builder`；现网报错 → `nexus-app-debugger`；深度 AuthZ/租户审计 → `nexus-security-reviewer`。
+应用**已有实现**，用户要做发布前 / 提交前就绪检查（「能不能发布」而非「怎么部署」）。  
+新建/部署讲解 → `nexus-app-builder`；现网报错 → `nexus-app-debugger`；安全审计/漏洞评估 → `nexus-security-reviewer`。
 
 ## MUST
 
 1. 先审计，默认**不改代码**；按 `references/review-checklist.md` 产出通过 / 阻塞 / 建议。
-2. 遵守 `references/boundaries.md`、`references/platform-invariants.md`。
+2. **开始前打开并读完** [references/boundaries.md](references/boundaries.md) 与 [references/platform-invariants.md](references/platform-invariants.md)。
 3. 读 `manifest.yaml`（优先于 `.yml`）与相关源码；运行 `nexus lint` 作证据。
 4. 明显安全信号可记录并建议转 `nexus-security-reviewer`，**不默认**完整 SAST/`npm audit`。
-5. **知识原则**：审查流程与清单用内置 `review-checklist`；字段/SDK/扩展点准确规范按需官方在线查证（`docs-online.md`），不猜测。
+5. **知识原则**：打开 [references/review-checklist.md](references/review-checklist.md)；字段/SDK/扩展点按条件查证（[references/docs-online.md](references/docs-online.md)），勿整目录预读、不猜测。
 6. 不索要 token；不执行 deploy/distribute，除非用户明确要求。
 
 ## NEVER

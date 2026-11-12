@@ -5,21 +5,20 @@ description: "面向 AI 的 PingCode Nexus 后端函数、Resolver、事件处�
 
 # Nexus 后端开发者指南
 
-## 相关指南
+## 相关指南（按需，勿因本文件再整本预读）
 
-- nexus-development-guide
-- nexus-app-manifest-guide
+- 创建 / 部署总览：`nexus-development-guide.md`（仅当前任务相关章节）
+- manifest 字段：`nexus-app-manifest-guide.md`（仅当前字段相关章节）
 
 ## 1. 指南范围与前置条件
 
 本指南聚焦 Nexus 应用的后端实现：Resolver 函数、事件处理函数、PingCode REST API 调用、外部 API 调用、远程服务、存储、异步队列、自定义 REST API、错误处理和日志。
 
-在使用本指南前：
+加载规则：
 
-- 已阅读 **nexus-development-guide** 中与当前意图相关的章节（服从 builder 意图分支：纯咨询可不 create/deploy；改已有跳过 create；仅用户要求时才 deploy/distribute）。
+- **按章节跳读**本指南；服从 builder 意图分支（纯咨询可不 create/deploy；改已有跳过 create；仅用户要求时才 deploy/distribute）。
+- **不要**为打开本指南而先通读其它长指南。其它指南仅在当前任务明确缺字段/流程时再按章节打开。
 - 需要跑 CLI 时：Node.js 24+、已安装 Nexus CLI；新建应用用 `nexus create`（或本包脚本）拿到有效 `app.id`。
-- 已阅读 **nexus-app-manifest-guide**，理解 `manifest.yaml` 中 `functions`、`permissions`、`event`、`storage`、`async`、`exposer`、`remotes`、`endpoints` 的写法。
-- 熟悉 TypeScript 与现代 JavaScript。
 - 后端 SDK 包统一使用 `@pc-nexus/*` 前缀。
 
 > 文档约定：Nexus 平台仍在快速演进，scope、事件名、REST 路径等可能随版本变化。在编写真实应用前，ALWAYS 由人工核对最新官方文档或实际运行结果，NEVER 仅凭文档中的示例直接交付代码。

@@ -20,10 +20,10 @@ Nexus AuthN/AuthZ 关键风险
 
 子规则
 
-- `as:"app"` 权限提升 → `@nexus-authn-authz/asapp-privilege-escalation.mdc`
-- 优先使用函数 context 对象 → `@nexus-authn-authz/prefer-context-authz.mdc`
-- Resolver 缺失授权 → `@nexus-authn-authz/missing-resolver-authz.mdc`
-- display 条件绕过 → `@nexus-authn-authz/display-conditions-bypass.mdc`
+- `as:"app"` 权限提升 → `assets/security-rules/nexus-authn-authz/asapp-privilege-escalation.mdc`
+- 优先使用函数 context 对象 → `assets/security-rules/nexus-authn-authz/prefer-context-authz.mdc`
+- Resolver 缺失授权 → `assets/security-rules/nexus-authn-authz/missing-resolver-authz.mdc`
+- display 条件绕过 → `assets/security-rules/nexus-authn-authz/display-conditions-bypass.mdc`
 
 检测启发式
 

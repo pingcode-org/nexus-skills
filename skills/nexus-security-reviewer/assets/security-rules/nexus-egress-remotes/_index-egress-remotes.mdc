@@ -19,8 +19,8 @@ Nexus 出站/Remote 关键风险
 
 子规则
 
-- 通配符外部权限 → `@nexus-egress-remotes/wildcard-permissions.mdc`
-- 通过重定向外泄数据 → `@nexus-egress-remotes/data-egress-redirects.mdc`
+- 通配符外部权限 → `assets/security-rules/nexus-egress-remotes/wildcard-permissions.mdc`
+- 通过重定向外泄数据 → `assets/security-rules/nexus-egress-remotes/data-egress-redirects.mdc`
 
 检测启发式
 

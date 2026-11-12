@@ -22,11 +22,11 @@ Nexus 注入关键风险
 
 子规则
 
-- 远程代码执行 → `@nexus-injection/rce-code-execution.mdc`
-- 跨站脚本 → `@nexus-injection/xss.mdc`
-- 原型污染 → `@nexus-injection/prototype-pollution.mdc`
-- SSRF 与请求伪造 → `@nexus-injection/ssrf.mdc`
-- 查询/路径/键注入（含类 SQL 与 CES/NOS/API 路径注入）→ `@nexus-injection/sql-injection.mdc`
+- 远程代码执行 → `assets/security-rules/nexus-injection/rce-code-execution.mdc`
+- 跨站脚本 → `assets/security-rules/nexus-injection/xss.mdc`
+- 原型污染 → `assets/security-rules/nexus-injection/prototype-pollution.mdc`
+- SSRF 与请求伪造 → `assets/security-rules/nexus-injection/ssrf.mdc`
+- 查询/路径/键注入（含类 SQL 与 CES/NOS/API 路径注入）→ `assets/security-rules/nexus-injection/sql-injection.mdc`
 
 检测启发式
 

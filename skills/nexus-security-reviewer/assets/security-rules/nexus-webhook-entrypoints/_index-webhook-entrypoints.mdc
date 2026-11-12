@@ -19,10 +19,7 @@ Nexus 入口关键风险
 
 子规则
 
-- Webhook 安全 → `@nexus-webhook-entrypoints/webhook-security.mdc`
-<!-- - 请求认证 → `@nexus-webhook-entrypoints/request-authentication.mdc`
-- 重放与滥用防护 → `@nexus-webhook-entrypoints/replay-abuse-protection.mdc`
-- 事件处理器校验 → `@nexus-webhook-entrypoints/event-handler-validation.mdc` -->
+- Webhook 安全 → `assets/security-rules/nexus-webhook-entrypoints/webhook-security.mdc`
 
 检测启发式
 

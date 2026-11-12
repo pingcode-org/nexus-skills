@@ -11,7 +11,7 @@ python3 -m scripts.create_nexus_app \
   --directory <parent-directory>
 ```
 
-4. 定制：`ui-resolver-min-path.md`；深读 Custom UI / Backend / Manifest guides。
-5. 仅当用户要求时：`build-web`（若有前端）→ `deploy_nexus_app` →（可选）distribute；说明管理员安装。
+4. 定制：先开最小路径（Custom UI → `ui-resolver-min-path.md`；Native UI → `native-ui-min-path.md`；事件/Webhook → `event-webhook-min-path.md`）。仅当最小路径不够时，**再按章节打开一份**对应长指南（Custom UI / Backend / Manifest / development），一次只开一份，勿三份一起读。
+5. 仅当用户要求时：`build-web`（若有前端）→ `deploy_nexus_app`（`--distribute` 须带 `--site`）→（可选）distribute；说明管理员安装。
 
 NEVER 手搓无 `app.id` 的工程；`create` 失败则 STOP 并给出交互式终端命令。

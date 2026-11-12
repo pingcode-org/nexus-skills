@@ -87,20 +87,27 @@ def print_warning(message):
     print(f"{Colors.WARNING}⚠ {message}{Colors.ENDC}")
 
 
-def run_command(cmd, cwd=None, capture_output=True, check=True):
-    """Run a shell command and return the result."""
+def run_command(cmd, cwd=None, capture_output=True, check=True, timeout=600):
+    """Run an argv list without shell and without inheriting stdin."""
+    if isinstance(cmd, str):
+        raise TypeError("run_command expects an argv list, not a shell string")
+    display = " ".join(cmd)
     try:
         result = subprocess.run(
             cmd,
-            shell=True,
             cwd=cwd,
+            stdin=subprocess.DEVNULL,
             capture_output=capture_output,
             text=True,
             check=check,
+            timeout=timeout,
         )
         return result
+    except subprocess.TimeoutExpired:
+        print_error(f"Command timed out (possible interactive prompt): {display}")
+        raise
     except subprocess.CalledProcessError as e:
-        print_error(f"Command failed: {cmd}")
+        print_error(f"Command failed: {display}")
         if e.stdout and e.stdout.strip():
             print(f"\n--- stdout ---\n{e.stdout.strip()}")
         if e.stderr and e.stderr.strip():
@@ -111,7 +118,7 @@ def run_command(cmd, cwd=None, capture_output=True, check=True):
 def check_node():
     """Check if Node.js is installed and get version."""
     try:
-        result = run_command("node -v")
+        result = run_command(["node", "-v"], timeout=30)
         version = result.stdout.strip()
         print_success(f"Node.js {version} found")
         return True
@@ -123,8 +130,8 @@ def check_node():
 def check_nexus_cli():
     """Check if Nexus CLI is installed and get version."""
     try:
-        result = run_command("nexus --version")
-        version = result.stdout.strip().split('\n')[0]
+        result = run_command(["nexus", "--version"], timeout=30)
+        version = result.stdout.strip().split("\n")[0]
         print_success(f"Nexus CLI {version} found")
         return True
     except Exception:
@@ -138,11 +145,7 @@ def check_nexus_login():
     `nexus whoami --json`. Returns True when an account is present.
     """
     try:
-        result = subprocess.run(
-            ["nexus", "whoami", "--json"],
-            capture_output=True,
-            text=True,
-        )
+        result = run_command(["nexus", "whoami", "--json"], timeout=30, check=False)
         if result.returncode != 0:
             message = result.stderr.strip() or result.stdout.strip()
             print_error("Not logged into Nexus. Run: nexus login")
@@ -171,7 +174,7 @@ def check_nexus_login():
 def install_dependencies(app_dir):
     """Install npm dependencies."""
     print("Installing dependencies (this may take a few minutes)...")
-    run_command("npm install", cwd=app_dir)
+    run_command(["npm", "install"], cwd=app_dir)
     print_success("Dependencies installed")
     return True
 
@@ -196,7 +199,7 @@ def build_web(app_dir):
         print_warning("No build-web script found in package.json — skipping frontend build")
         return True
     print("Building frontend assets (npm run build-web)...")
-    run_command("npm run build-web", cwd=app_dir)
+    run_command(["npm", "run", "build-web"], cwd=app_dir)
     print_success("Frontend built")
     return True
 
@@ -204,7 +207,7 @@ def build_web(app_dir):
 def lint_app(app_dir, fix=False):
     """Run nexus lint to validate source files and manifest."""
     print("Validating app with nexus lint...")
-    cmd = "nexus lint --fix" if fix else "nexus lint"
+    cmd = ["nexus", "lint", "--fix"] if fix else ["nexus", "lint"]
     run_command(cmd, cwd=app_dir)
     print_success("Lint passed")
     return True
@@ -277,35 +280,32 @@ def check_app_registered(app_dir):
 
 def register_app(app_dir, app_name=None):
     """
-    Register the app with Nexus via `nexus register`. This command is
-    interactive (it may prompt for the app name), so we surface a clear
-    message when it cannot run non-interactively.
+    Register the app with Nexus via `nexus register`.
+    Never wait on interactive prompts; fail with manual instructions instead.
     """
     print_warning("App needs to be registered with Nexus")
 
-    cmd = "nexus register"
+    cmd = ["nexus", "register"]
     if app_name:
-        cmd += f" {app_name}"
+        cmd.append(app_name)
 
     try:
-        result = subprocess.run(
-            cmd,
-            cwd=app_dir,
-            shell=True,
-            capture_output=True,
-            text=True,
-        )
+        result = run_command(cmd, cwd=app_dir, check=False, timeout=60)
         if result.returncode == 0:
             print_success("App registered successfully")
             return True
-    except Exception:
-        pass
+        if result.stdout and result.stdout.strip():
+            print(f"\n--- stdout ---\n{result.stdout.strip()}")
+        if result.stderr and result.stderr.strip():
+            print(f"\n--- stderr ---\n{result.stderr.strip()}")
+    except Exception as exc:
+        print_warning(f"`nexus register` failed non-interactively: {exc}")
 
-    print_warning("`nexus register` may require interactive input")
+    print_error("`nexus register` requires an interactive terminal or a non-interactive CLI flag")
     print_warning("Please run this command manually in your terminal:")
     print(f"  cd {app_dir}")
-    print("  nexus register")
-    print_warning("Then run this script again.")
+    print("  nexus register" + (f" {app_name}" if app_name else ""))
+    print_warning("Then run this script again with the same flags.")
     return False
 
 
@@ -315,11 +315,11 @@ def list_environments(app_dir):
     `nexus environments list --json`. Returns an empty list on failure.
     """
     try:
-        result = subprocess.run(
+        result = run_command(
             ["nexus", "environments", "list", "--json"],
             cwd=app_dir,
-            capture_output=True,
-            text=True,
+            check=False,
+            timeout=60,
         )
         if result.returncode != 0:
             return []
@@ -402,11 +402,11 @@ def ensure_environment(app_dir, environment):
         return False
 
     print(f"Creating Development-type environment '{environment}'...")
-    result = subprocess.run(
+    result = run_command(
         ["nexus", "environments", "create", "-e", environment, "--non-interactive"],
         cwd=app_dir,
-        capture_output=True,
-        text=True,
+        check=False,
+        timeout=120,
     )
     if result.returncode == 0:
         print_success(f"Environment '{environment}' created")
@@ -426,11 +426,11 @@ def deploy_app(app_dir, environment=DEFAULT_ENVIRONMENT, tag=None, no_verify=Fal
     a new build (when --tag is omitted), and deploys it in one step.
     """
     print(f"Deploying to {environment} environment...")
-    cmd = f"nexus deploy --non-interactive -e {environment}"
+    cmd = ["nexus", "deploy", "--non-interactive", "-e", environment]
     if tag:
-        cmd += f" --tag {tag}"
+        cmd.extend(["--tag", tag])
     if no_verify:
-        cmd += " --no-verify"
+        cmd.append("--no-verify")
     run_command(cmd, cwd=app_dir)
     print_success(f"Deployed to {environment}")
     return True
@@ -442,11 +442,11 @@ def list_deployments(app_dir, limit=50):
     Returns an empty list on failure.
     """
     try:
-        result = subprocess.run(
+        result = run_command(
             ["nexus", "deploy", "list", "--json", "-l", str(limit)],
             cwd=app_dir,
-            capture_output=True,
-            text=True,
+            check=False,
+            timeout=60,
         )
         if result.returncode != 0:
             return []
@@ -485,8 +485,8 @@ def check_deployment_exists(app_dir, environment):
 def distribute_app(app_dir, site_url, environment=DEFAULT_ENVIRONMENT):
     """Distribute the deployed app to a PingCode site."""
     print(f"Distributing to {site_url} ({environment})...")
-    cmd = f"nexus distribute -s {site_url} -e {environment}"
-    run_command(cmd, cwd=app_dir)
+    cmd = ["nexus", "distribute", "-s", site_url, "-e", environment]
+    run_command(cmd, cwd=app_dir, timeout=180)
     print_success(f"Distributed to {site_url}")
     return True
 
@@ -503,8 +503,8 @@ def get_app_logs(app_dir, environment=DEFAULT_ENVIRONMENT, limit=25):
         )
         return
     print("Fetching recent logs...")
-    cmd = f"nexus logs -e {environment} --limit {limit}"
-    result = run_command(cmd, cwd=app_dir, capture_output=True)
+    cmd = ["nexus", "logs", "-e", environment, "--limit", str(limit)]
+    result = run_command(cmd, cwd=app_dir, capture_output=True, timeout=60)
     output = result.stdout.strip()
     if output:
         print(output)
@@ -609,8 +609,11 @@ Examples:
     if not args.deploy and not args.distribute:
         parser.error("At least one of --deploy or --distribute must be specified")
 
-    if args.distribute and not args.deploy and not args.site:
-        parser.error("--site is required when --distribute is used without --deploy")
+    if args.distribute and not args.site:
+        parser.error(
+            "--site is required with --distribute "
+            "(e.g. --site your-domain.pingcode.com)"
+        )
 
     app_dir = Path(args.app_dir).resolve()
 
@@ -643,7 +646,7 @@ Examples:
         actions.append("distribute")
     print(f"Actions:       {', '.join(actions)}")
     if args.distribute:
-        print(f"Target Site:   {args.site or '(will prompt)'}")
+        print(f"Target Site:   {args.site or '(missing --site)'}")
     if args.tag:
         print(f"Build Tag:     {args.tag}")
 
@@ -751,12 +754,11 @@ Examples:
     if args.distribute:
         site = args.site
         if not site:
-            print("\n⚠️  PingCode site URL is required for distribution")
-            site = input(
-                "Enter site URL (e.g., your-domain.pingcode.com): "
-            ).strip()
-        if not site:
-            print_error("Site URL is required for distribution")
+            print_error(
+                "Distribution requires --site <domain> "
+                "(e.g. --site your-domain.pingcode.com). "
+                "Do not prompt interactively; re-run with --site."
+            )
             sys.exit(1)
 
         # Normalize: strip protocol/path so `-s` receives just the host.

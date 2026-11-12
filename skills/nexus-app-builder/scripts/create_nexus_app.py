@@ -31,13 +31,25 @@ NEXUS_TEMPLATES = [
 ]
 
 
+def _run(cmd, cwd=None, timeout=120):
+    """Run a command without inheriting stdin (never wait on interactive prompts)."""
+    return subprocess.run(
+        cmd,
+        cwd=cwd,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+
+
 def validate_prerequisites():
     """Check if Nexus CLI and Node.js are available."""
     try:
-        subprocess.run(["nexus", "--version"], capture_output=True, check=True)
-        subprocess.run(["node", "-v"], capture_output=True, check=True)
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
+        nexus = _run(["nexus", "--version"], timeout=30)
+        node = _run(["node", "-v"], timeout=30)
+        return nexus.returncode == 0 and node.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
 
@@ -81,11 +93,10 @@ def check_login():
     Returns (logged_in, identity) where identity is the account display name
     when logged in, or the error message when not.
     """
-    result = subprocess.run(
-        ["nexus", "whoami", "--json"],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = _run(["nexus", "whoami", "--json"], timeout=30)
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        return False, str(exc)
 
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip()
@@ -151,40 +162,40 @@ def create_app(template, app_name, output_dir=None):
         print("   Choose a different app name or remove the existing folder.")
         return False
 
-    # `nexus create --help` exposes no non-interactive / accept-terms
-    # flag, so we rely on --template to skip the template prompt. The command
-    # is run from the parent directory and Nexus creates the app subfolder.
+    # `nexus create` has no dedicated non-interactive flag beyond --template.
+    # Never inherit stdin: if the CLI blocks on a prompt, fail fast with
+    # instructions for the user's own terminal instead of hanging the agent.
     cmd = ["nexus", "create", app_name, "--template", template]
 
+    print(f"\nCreating Nexus app: {app_name}")
+    print(f"Template: {template}")
+    print(f"Location: {cwd}")
     try:
-        print(f"\nCreating Nexus app: {app_name}")
-        print(f"Template: {template}")
-        print(f"Location: {cwd}")
-        result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-
-        if result.returncode != 0:
-            stderr = result.stderr.strip()
-            stdout = result.stdout.strip()
-            print(f"[error] Failed to create app (exit code {result.returncode})")
-            if stdout:
-                print(f"\n--- stdout ---\n{stdout}")
-            if stderr:
-                print(f"\n--- stderr ---\n{stderr}")
-            print("\nIf the CLI requires an interactive terminal, run manually:")
-            print(f"   nexus create {app_name} --template {template}")
-            return False
-
-        print(f"[ok] App created successfully at: {app_path}")
-        print_next_steps(template, app_path)
-        return True
-
-    except subprocess.CalledProcessError as e:
-        print(f"[error] Failed to create app: {e}")
-        if e.stdout:
-            print(f"\n--- stdout ---\n{e.stdout}")
-        if e.stderr:
-            print(f"\n--- stderr ---\n{e.stderr}")
+        result = _run(cmd, cwd=cwd, timeout=180)
+    except subprocess.TimeoutExpired:
+        print("[error] `nexus create` timed out (possible interactive prompt).")
+        print("   Run this in your own terminal:")
+        print(f"   nexus create {app_name} --template {template}")
         return False
+    except FileNotFoundError:
+        print("[error] `nexus` CLI not found. Install: npm install -g @pc-nexus/cli")
+        return False
+
+    if result.returncode != 0:
+        stderr = (result.stderr or "").strip()
+        stdout = (result.stdout or "").strip()
+        print(f"[error] Failed to create app (exit code {result.returncode})")
+        if stdout:
+            print(f"\n--- stdout ---\n{stdout}")
+        if stderr:
+            print(f"\n--- stderr ---\n{stderr}")
+        print("\nIf the CLI requires an interactive terminal, run manually:")
+        print(f"   nexus create {app_name} --template {template}")
+        return False
+
+    print(f"[ok] App created successfully at: {app_path}")
+    print_next_steps(template, app_path)
+    return True
 
 
 def print_next_steps(template, app_path):

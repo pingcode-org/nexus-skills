@@ -1,10 +1,12 @@
 ---
 name: nexus-app-debugger
 description: >-
-  诊断并修复 PingCode Nexus 应用问题。适用于报错、崩溃、白屏、部署失败、安装后不显示、
-  权限不足、Resolver 异常、Custom UI 不渲染、日志缺失、外部 API 被拦截、UI Invoke 超时、
-  事件/Webhook 不触发，或 nexus logs / deploy / lint / serve 相关故障。
-  不要用于从零新建应用（nexus-app-builder）、发布就绪检查（nexus-app-reviewer）或深度安全审计（nexus-security-reviewer）。
+  诊断并修复 PingCode 扩展应用故障：工作项面板、项目页、仪表盘、Wiki 内容块、事件或 Webhook 异常，
+  即使用户未说 Nexus。适用于崩溃、白屏、部署失败、安装后不显示、权限不足、Resolver 异常、
+  Custom UI 不渲染、日志缺失、外部 API 被拦截、UI Invoke 超时、事件/Webhook 不触发，
+  或 nexus logs / lint / serve / deploy 报错等故障排查。
+  不要用于从零新建、讲解怎么部署/分发、开发期脚手架/概念咨询，或开发期编译/构建错误
+  （nexus-app-builder）；发布就绪检查（nexus-app-reviewer）或深度安全审计（nexus-security-reviewer）。
 license: MIT
 metadata:
   maintainer: pingcode
@@ -26,17 +28,17 @@ metadata:
 ## MUST
 
 1. **证据优先**；对照 `references/debug-playbook.md`，**定位根因即停**（多独立缺陷则先部署后运行时）。
-2. 遵守 `references/boundaries.md`、`references/platform-invariants.md`。
+2. **开始前打开并读完** [references/boundaries.md](references/boundaries.md) 与 [references/platform-invariants.md](references/platform-invariants.md)。
 3. 低成本先跑：`node -v`、`nexus --version`、`nexus lint`，再读源码/日志。
 4. 修复后**复验**同一证据路径；清理临时 DEBUG 日志。
-5. **知识原则**：高频排障用内置 `debug-playbook`；接口/配置明细按需官方在线或 `search_nexus_docs`（`docs-online.md`）。
+5. **知识原则**：排障打开 [references/debug-playbook.md](references/debug-playbook.md)；字段/API 明细按条件检索（[references/docs-online.md](references/docs-online.md)），勿整目录预读。
 6. 不索要 token；引导本机 `nexus login`。
 
 ## NEVER
 
 - 证据不足时断言唯一根因
 - 编造未核实的平台字段 / API 行为
-- 把「加功能 / 从零创建」当调试主路径（转 `nexus-app-builder`）
+- 把「加功能 / 从零创建 / 怎么部署」或开发期编译/构建错误当调试主路径（转 `nexus-app-builder`）
 - 用完整安全审计替代故障定位；带 `--no-verify` 发布
 
 ## 工作流
@@ -56,4 +58,4 @@ metadata:
 
 ## 交接
 
-知识咨询或新需求 → `nexus-app-builder`；发布检查 → `nexus-app-reviewer`；系统性 AuthZ/租户 → `nexus-security-reviewer`。
+怎么部署/分发、新建、概念咨询或开发期编译/构建错误 → `nexus-app-builder`；发布检查 → `nexus-app-reviewer`；系统性 AuthZ/租户 → `nexus-security-reviewer`。
